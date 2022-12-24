@@ -112,21 +112,8 @@ impl Grid {
     fn eat_snake_rec(&mut self, player: &Player, color: &Color, x: usize, y: usize, dir: i32) {
         self.cells[y][x] = Cell::Uncolored;
 
-        let next_y = y as i32 + dir;
-        // Bounds check
-        if next_y < 0 || next_y >= GRID_HEIGHT as i32 {
-            return;
-        }
-        let next_y = next_y as usize;
-        // Try to eat next part of the body
-        if x > 0 && self.cells[next_y][x - 1] == Cell::Colored(*player, *color) {
-            return self.eat_snake_rec(player, color, x - 1, next_y, dir);
-        }
-        if x > 0 && self.cells[next_y][x] == Cell::Colored(*player, *color) {
-            return self.eat_snake_rec(player, color, x, next_y, dir);
-        }
-        if x > 0 && self.cells[next_y][x + 1] == Cell::Colored(*player, *color) {
-            self.eat_snake_rec(player, color, x + 1, next_y, dir)
+        if let Some((next_x, next_y)) = self.next_snake_part(player, color, x, y, dir) {
+            self.eat_snake_rec(player, color, next_x, next_y, dir);
         }
     }
 
@@ -158,24 +145,37 @@ impl Grid {
         y: usize,
         dir: i32,
     ) -> (usize, usize) {
+        match self.next_snake_part(player, color, x, y, dir) {
+            Some((next_x, next_y)) => self.find_snake_head_rec(player, color, next_x, next_y, dir),
+            None => (x, y),
+        }
+    }
+
+    fn next_snake_part(
+        &self,
+        player: &Player,
+        color: &Color,
+        x: usize,
+        y: usize,
+        dir: i32,
+    ) -> Option<(usize, usize)> {
         let next_y = y as i32 + dir;
         // Bounds check
         if next_y < 0 || next_y >= GRID_HEIGHT as i32 {
-            return (x, y);
+            return None;
         }
         let next_y = next_y as usize;
         // Try to find next part of the body
         if x > 0 && self.cells[next_y][x - 1] == Cell::Colored(*player, *color) {
-            return self.find_snake_head_rec(player, color, x - 1, next_y, dir);
+            return Some((x - 1, next_y));
         }
         if self.cells[next_y][x] == Cell::Colored(*player, *color) {
-            return self.find_snake_head_rec(player, color, x, next_y, dir);
+            return Some((x, next_y));
         }
         if x < GRID_WIDTH - 1 && self.cells[next_y][x + 1] == Cell::Colored(*player, *color) {
-            return self.find_snake_head_rec(player, color, x + 1, next_y, dir);
+            return Some((x + 1, next_y));
         }
-        // We found the head
-        (x, y)
+        None
     }
 
     fn grows_head(
