@@ -1,5 +1,7 @@
 use crate::color::Color;
 use crate::player::Player;
+
+use anyhow::{bail, Result};
 use std::fmt::Display;
 
 pub const GRID_WIDTH: usize = 5;
@@ -24,18 +26,16 @@ impl Grid {
         color: &Color,
         x: usize,
         y: usize,
-    ) -> Result<bool, String> {
+    ) -> Result<bool> {
         match &self.cells[y][x] {
             Cell::Player(targeted_player) => {
                 if player == targeted_player {
-                    return Err("You can't place a color on your own invocator".to_string());
+                    bail!("You can't place a color on your own invocator");
                 }
                 match self.find_snake_head(player, color) {
                     Some((snake_head_x, snake_head_y)) => {
                         if !Grid::grows_head(player, snake_head_x, snake_head_y, x, y) {
-                            return Err(
-                                "The cell you picked does not grow your existing snake".to_string()
-                            );
+                            bail!("The cell you picked does not grow your existing snake");
                         }
                         Ok(true)
                     }
@@ -43,9 +43,7 @@ impl Grid {
                         if (*player == Player::Top && y != 0)
                             || (*player == Player::Bottom && y != GRID_HEIGHT - 1)
                         {
-                            return Err(
-                                "You must invoke your snake on your invocation line".to_string()
-                            );
+                            bail!("You must invoke your snake on your invocation line");
                         }
                         Ok(false)
                     }
@@ -54,13 +52,10 @@ impl Grid {
             Cell::Colored(_, targeted_color) => match self.find_snake_head(player, color) {
                 Some((snake_head_x, snake_head_y)) => {
                     if !Grid::grows_head(player, snake_head_x, snake_head_y, x, y) {
-                        return Err(
-                            "The cell you picked does not grow your existing snake".to_string()
-                        );
+                        bail!("The cell you picked does not grow your existing snake");
                     }
                     if !color.beats(targeted_color) {
-                        return Err("This snake is not strong enough to beat the targeted snake"
-                            .to_string());
+                        bail!("This snake is not strong enough to beat the targeted snake");
                     }
                     Ok(false)
                 }
@@ -68,9 +63,7 @@ impl Grid {
                     if (*player == Player::Top && y != 0)
                         || (*player == Player::Bottom && y != GRID_HEIGHT - 1)
                     {
-                        return Err(
-                            "You must invoke your snake on your invocation line".to_string()
-                        );
+                        bail!("You must invoke your snake on your invocation line");
                     }
                     Ok(false)
                 }
@@ -78,9 +71,7 @@ impl Grid {
             Cell::Uncolored => match self.find_snake_head(player, color) {
                 Some((snake_head_x, snake_head_y)) => {
                     if !Grid::grows_head(player, snake_head_x, snake_head_y, x, y) {
-                        return Err(
-                            "The cell you picked does not grow your existing snake".to_string()
-                        );
+                        bail!("The cell you picked does not grow your existing snake");
                     }
                     Ok(false)
                 }
@@ -88,9 +79,7 @@ impl Grid {
                     if (*player == Player::Top && y != 0)
                         || (*player == Player::Bottom && y != GRID_HEIGHT - 1)
                     {
-                        return Err(
-                            "You must invoke your snake on your invocation line".to_string()
-                        );
+                        bail!("You must invoke your snake on your invocation line");
                     }
                     Ok(false)
                 }

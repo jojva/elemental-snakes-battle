@@ -2,6 +2,7 @@ mod color;
 mod grid;
 mod player;
 
+use anyhow::{bail, Result};
 use color::Color;
 use grid::{Grid, GRID_HEIGHT, GRID_WIDTH};
 use player::Player;
@@ -25,26 +26,14 @@ fn main() -> io::Result<()> {
         print!("Place a color: ");
         io::stdout().flush().unwrap();
 
-        let (color, x, y) = match parse_input() {
-            Ok((color, x, y)) => (color, x, y),
+        match play_turn(&mut grid, &player) {
+            Ok(true) => break,
             Err(e) => {
-                err = e;
+                err = e.to_string();
                 continue;
             }
+            _ => (),
         };
-
-        let win = match grid.is_valid_move(&player, &color, x, y) {
-            Ok(win) => win,
-            Err(e) => {
-                err = e;
-                continue;
-            }
-        };
-        grid.play_move(&player, &color, x, y);
-
-        if win {
-            break;
-        }
 
         player = player.next();
     }
@@ -54,7 +43,14 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn parse_input() -> Result<(Color, usize, usize), String> {
+fn play_turn(grid: &mut Grid, player: &Player) -> Result<bool> {
+    let (color, x, y) = parse_input()?;
+    let win = grid.is_valid_move(player, &color, x, y)?;
+    grid.play_move(player, &color, x, y);
+    Ok(win)
+}
+
+fn parse_input() -> Result<(Color, usize, usize)> {
     let stdin = io::stdin();
     let mut user_input = String::new();
 
@@ -62,31 +58,31 @@ fn parse_input() -> Result<(Color, usize, usize), String> {
     stdin.read_line(&mut user_input).unwrap();
     let commands = user_input.trim().chars().collect::<Vec<_>>();
     if commands.len() != 3 {
-        return Err(format!(
+        bail!(
             "Expected 3 parameters, got {}: {:?}",
             commands.len(),
             commands
-        ));
+        );
     }
     let color = Color::try_from(commands[0]);
     let color = match color {
         Ok(color) => color,
         Err(_) => {
-            return Err(format!("Couldn't parse color '{}'", commands[0]));
+            bail!("Couldn't parse color '{}'", commands[0]);
         }
     };
     let x = (commands[1] as usize).wrapping_sub('a' as usize);
     if x >= GRID_WIDTH {
-        return Err("Column must be 'a', 'b', 'c', 'd', or 'e'".to_string());
+        bail!("Column must be 'a', 'b', 'c', 'd', or 'e'");
     }
     let y = char::to_digit(commands[2], 10);
     let y = match y {
         Some(y) if y == 0 || y as usize > GRID_HEIGHT => {
-            return Err(format!("Row must be between 1 and {}", GRID_HEIGHT));
+            bail!("Row must be between 1 and {}", GRID_HEIGHT);
         }
         Some(y) => (y - 1) as usize,
         None => {
-            return Err("Couldn't parse row".to_string());
+            bail!("Couldn't parse row");
         }
     };
     Ok((color, x, y))
